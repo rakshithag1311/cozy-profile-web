@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 
+import RoleSelectionPage from "./pages/RoleSelectionPage";
 import HomePage from "./pages/HomePage";
 import ShopListPage from "./pages/ShopListPage";
 import ShopItemsPage from "./pages/ShopItemsPage";
@@ -27,7 +28,8 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={<RoleSelectionPage />} />
+              <Route path="/home" element={<HomePage />} />
               <Route path="/shops" element={<ShopListPage />} />
               <Route path="/shop/:shopId" element={<ShopItemsPage />} />
               <Route path="/cart" element={<CartPage />} />

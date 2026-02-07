@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem } from './CartContext';
 
-export type OrderStatus = 'new' | 'preparing' | 'ready';
+export type OrderStatus = 'new' | 'preparing' | 'ready' | 'cancelled' | 'rejected';
 
 export interface Order {
   id: string;
@@ -18,6 +18,8 @@ interface OrderContextType {
   orders: Order[];
   createOrder: (items: CartItem[], shopId: string, shopName: string, totalPrice: number, pickupTime: string) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  cancelOrder: (orderId: string) => void;
+  rejectOrder: (orderId: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
   getOrdersByShop: (shopId: string) => Order[];
 }
@@ -54,6 +56,26 @@ export const OrderProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const cancelOrder = (orderId: string) => {
+    setOrders(prev =>
+      prev.map(order =>
+        order.id === orderId && (order.status === 'new' || order.status === 'preparing')
+          ? { ...order, status: 'cancelled' as OrderStatus }
+          : order
+      )
+    );
+  };
+
+  const rejectOrder = (orderId: string) => {
+    setOrders(prev =>
+      prev.map(order =>
+        order.id === orderId && order.status === 'new'
+          ? { ...order, status: 'rejected' as OrderStatus }
+          : order
+      )
+    );
+  };
+
   const getOrderById = useCallback((orderId: string) => {
     return orders.find(order => order.id === orderId);
   }, [orders]);
@@ -67,6 +89,8 @@ export const OrderProvider = ({ children }: { children: ReactNode }) => {
       orders,
       createOrder,
       updateOrderStatus,
+      cancelOrder,
+      rejectOrder,
       getOrderById,
       getOrdersByShop
     }}>

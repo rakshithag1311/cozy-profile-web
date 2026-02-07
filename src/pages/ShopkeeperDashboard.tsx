@@ -40,6 +40,8 @@ const ShopkeeperDashboard = () => {
       case 'new': return { label: 'New', className: 'status-new' };
       case 'preparing': return { label: 'Preparing', className: 'status-preparing' };
       case 'ready': return { label: 'Ready', className: 'status-ready' };
+      case 'cancelled': return { label: 'Cancelled', className: 'status-cancelled' };
+      case 'rejected': return { label: 'Rejected', className: 'status-rejected' };
       default: return { label: status, className: 'status-new' };
     }
   };
@@ -126,9 +128,14 @@ const ShopkeeperDashboard = () => {
 
                   <div className="flex gap-2">
                     {order.status === 'new' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'preparing')} className="btn-primary flex-1 py-2">
-                        Mark as Preparing
-                      </button>
+                      <>
+                        <button onClick={() => handleStatusUpdate(order.id, 'preparing')} className="btn-primary flex-1 py-2">
+                          Accept & Prepare
+                        </button>
+                        <button onClick={() => handleStatusUpdate(order.id, 'rejected')} className="flex-1 py-2 border-2 border-destructive text-destructive rounded-xl font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors">
+                          Reject
+                        </button>
+                      </>
                     )}
                     {order.status === 'preparing' && (
                       <button onClick={() => handleStatusUpdate(order.id, 'ready')} className="flex-1 py-2 bg-success text-success-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity">
@@ -137,6 +144,12 @@ const ShopkeeperDashboard = () => {
                     )}
                     {order.status === 'ready' && (
                       <div className="flex-1 py-2 text-center text-success font-semibold">✓ Ready for Pickup</div>
+                    )}
+                    {order.status === 'cancelled' && (
+                      <div className="flex-1 py-2 text-center text-muted-foreground font-semibold">Cancelled by Customer</div>
+                    )}
+                    {order.status === 'rejected' && (
+                      <div className="flex-1 py-2 text-center text-destructive font-semibold">Order Rejected</div>
                     )}
                   </div>
                 </div>

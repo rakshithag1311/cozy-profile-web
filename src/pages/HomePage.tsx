@@ -54,10 +54,10 @@ const HomePage = () => {
 
         {/* Shopkeeper Link */}
         <button
-          onClick={() => navigate('/shopkeeper/login')}
+          onClick={() => navigate('/')}
           className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors"
         >
-          Are you a shopkeeper? Login here →
+          ← Back to role selection
         </button>
       </div>
     </div>

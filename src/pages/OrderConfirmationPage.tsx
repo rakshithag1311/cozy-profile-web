@@ -15,6 +15,8 @@ const OrderConfirmationPage = () => {
       case 'new': return { label: 'New', className: 'status-new' };
       case 'preparing': return { label: 'Preparing', className: 'status-preparing' };
       case 'ready': return { label: 'Ready for Pickup', className: 'status-ready' };
+      case 'cancelled': return { label: 'Cancelled', className: 'status-cancelled' };
+      case 'rejected': return { label: 'Rejected', className: 'status-rejected' };
       default: return { label: status, className: 'status-new' };
     }
   };
