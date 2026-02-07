@@ -11,6 +11,7 @@ import ShopListPage from "./pages/ShopListPage";
 import ShopItemsPage from "./pages/ShopItemsPage";
 import CartPage from "./pages/CartPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import OrderTrackingPage from "./pages/OrderTrackingPage";
 import ShopkeeperLoginPage from "./pages/ShopkeeperLoginPage";
 import ShopkeeperDashboard from "./pages/ShopkeeperDashboard";
 import NotFound from "./pages/NotFound";
@@ -26,18 +27,14 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {/* Customer Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/shops" element={<ShopListPage />} />
               <Route path="/shop/:shopId" element={<ShopItemsPage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
-              
-              {/* Shopkeeper Routes */}
+              <Route path="/track/:orderId" element={<OrderTrackingPage />} />
               <Route path="/shopkeeper/login" element={<ShopkeeperLoginPage />} />
               <Route path="/shopkeeper/dashboard" element={<ShopkeeperDashboard />} />
-              
-              {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

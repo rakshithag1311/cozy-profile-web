@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Zap } from 'lucide-react';
+import { MapPin, Zap, Clock, QrCode, ShoppingBag } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -13,14 +13,35 @@ const HomePage = () => {
         </div>
 
         {/* Brand */}
-        <h1 className="text-4xl font-bold text-foreground mb-3">
-          Smartflask
+        <h1 className="text-4xl font-bold text-foreground mb-2">
+          Smartfetch
         </h1>
 
         {/* Tagline */}
-        <p className="text-xl text-muted-foreground mb-12">
-          Pick Fast. Go Smart.
+        <p className="text-lg font-medium text-primary mb-4">
+          Pick fast · Go smart
         </p>
+
+        {/* Description */}
+        <p className="text-muted-foreground mb-10 max-w-xs leading-relaxed">
+          Pre-order from nearby shops, choose a pickup time, and skip the waiting line.
+        </p>
+
+        {/* Features */}
+        <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-sm">
+          <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border">
+            <ShoppingBag className="w-5 h-5 text-primary" />
+            <span className="text-xs text-muted-foreground">Pre-order</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border">
+            <Clock className="w-5 h-5 text-primary" />
+            <span className="text-xs text-muted-foreground">Pick time</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border">
+            <QrCode className="w-5 h-5 text-primary" />
+            <span className="text-xs text-muted-foreground">QR pickup</span>
+          </div>
+        </div>
 
         {/* CTA Button */}
         <button
@@ -28,7 +49,7 @@ const HomePage = () => {
           className="btn-primary flex items-center gap-2 text-lg"
         >
           <MapPin className="w-5 h-5" />
-          Find Nearby Shops
+          Find Shops
         </button>
 
         {/* Shopkeeper Link */}

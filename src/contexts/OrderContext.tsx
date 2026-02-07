@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem } from './CartContext';
 
 export type OrderStatus = 'new' | 'preparing' | 'ready';
@@ -10,13 +10,13 @@ export interface Order {
   shopId: string;
   shopName: string;
   totalPrice: number;
+  pickupTime: string;
   createdAt: Date;
 }
 
 interface OrderContextType {
   orders: Order[];
-  customerOrders: Order[];
-  createOrder: (items: CartItem[], shopId: string, shopName: string, totalPrice: number) => string;
+  createOrder: (items: CartItem[], shopId: string, shopName: string, totalPrice: number, pickupTime: string) => string;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   getOrderById: (orderId: string) => Order | undefined;
   getOrdersByShop: (shopId: string) => Order[];
@@ -26,13 +26,12 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider = ({ children }: { children: ReactNode }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
 
   const generateOrderId = () => {
-    return 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    return 'SF-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const createOrder = (items: CartItem[], shopId: string, shopName: string, totalPrice: number) => {
+  const createOrder = (items: CartItem[], shopId: string, shopName: string, totalPrice: number, pickupTime: string) => {
     const newOrder: Order = {
       id: generateOrderId(),
       items,
@@ -40,38 +39,32 @@ export const OrderProvider = ({ children }: { children: ReactNode }) => {
       shopId,
       shopName,
       totalPrice,
+      pickupTime,
       createdAt: new Date()
     };
     setOrders(prev => [...prev, newOrder]);
-    setCustomerOrders(prev => [...prev, newOrder]);
     return newOrder.id;
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev => 
-      prev.map(order => 
-        order.id === orderId ? { ...order, status } : order
-      )
-    );
-    setCustomerOrders(prev => 
-      prev.map(order => 
+    setOrders(prev =>
+      prev.map(order =>
         order.id === orderId ? { ...order, status } : order
       )
     );
   };
 
-  const getOrderById = (orderId: string) => {
+  const getOrderById = useCallback((orderId: string) => {
     return orders.find(order => order.id === orderId);
-  };
+  }, [orders]);
 
-  const getOrdersByShop = (shopId: string) => {
+  const getOrdersByShop = useCallback((shopId: string) => {
     return orders.filter(order => order.shopId === shopId);
-  };
+  }, [orders]);
 
   return (
     <OrderContext.Provider value={{
       orders,
-      customerOrders,
       createOrder,
       updateOrderStatus,
       getOrderById,
