@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, Clock } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useOrders } from '@/contexts/OrderContext';
-import { getShopById } from '@/data/shops';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const TIME_SLOTS = [
   '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
@@ -16,15 +18,31 @@ const CartPage = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, clearCart, totalItems, totalPrice, currentShopId } = useCart();
   const { createOrder } = useOrders();
+  const { user } = useAuth();
   const [selectedTime, setSelectedTime] = useState('');
+  const [shopName, setShopName] = useState('');
+  const [placing, setPlacing] = useState(false);
 
-  const shop = currentShopId ? getShopById(currentShopId) : null;
+  useEffect(() => {
+    if (currentShopId) {
+      supabase.from('shops').select('name').eq('id', currentShopId).maybeSingle().then(({ data }) => {
+        if (data) setShopName(data.name);
+      });
+    }
+  }, [currentShopId]);
 
-  const handlePlaceOrder = () => {
-    if (items.length === 0 || !currentShopId || !shop || !selectedTime) return;
-    const orderId = createOrder(items, currentShopId, shop.name, totalPrice, selectedTime);
-    clearCart();
-    navigate(`/order-confirmation/${orderId}`);
+  const handlePlaceOrder = async () => {
+    if (!user) { navigate('/auth'); return; }
+    if (items.length === 0 || !currentShopId || !selectedTime) return;
+    setPlacing(true);
+    try {
+      const orderId = await createOrder(items, currentShopId, shopName, totalPrice, selectedTime);
+      clearCart();
+      navigate(`/order-confirmation/${orderId}`);
+    } catch (err) {
+      toast.error('Failed to place order');
+    }
+    setPlacing(false);
   };
 
   if (items.length === 0) {
@@ -59,11 +77,10 @@ const CartPage = () => {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Your Cart</h1>
-            {shop && <p className="text-sm text-muted-foreground">From {shop.name}</p>}
+            {shopName && <p className="text-sm text-muted-foreground">From {shopName}</p>}
           </div>
         </div>
 
-        {/* Cart Items */}
         <div className="space-y-3">
           {items.map((item) => (
             <div key={item.id} className="card-base">
@@ -89,38 +106,25 @@ const CartPage = () => {
           ))}
         </div>
 
-        {/* Summary */}
         <div className="card-base mt-6">
           <div className="flex justify-between items-center text-muted-foreground mb-2">
-            <span>Total Items</span>
-            <span>{totalItems}</span>
+            <span>Total Items</span><span>{totalItems}</span>
           </div>
           <div className="flex justify-between items-center text-lg font-bold text-foreground">
-            <span>Total</span>
-            <span className="text-primary">₹{totalPrice.toFixed(0)}</span>
+            <span>Total</span><span className="text-primary">₹{totalPrice.toFixed(0)}</span>
           </div>
         </div>
 
-        {/* Pickup Time Selection */}
         <div className="mt-6">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-5 h-5 text-primary" />
             <h2 className="section-title mb-0">Choose Pickup Time</h2>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Pickup time depends on shop preparation time ({shop?.prepTime}).
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Pickup time depends on shop preparation time.</p>
           <div className="grid grid-cols-3 gap-2">
             {TIME_SLOTS.map(slot => (
-              <button
-                key={slot}
-                onClick={() => setSelectedTime(slot)}
-                className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-colors ${
-                  selectedTime === slot
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground'
-                }`}
-              >
+              <button key={slot} onClick={() => setSelectedTime(slot)}
+                className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-colors ${selectedTime === slot ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}>
                 {slot}
               </button>
             ))}
@@ -128,15 +132,10 @@ const CartPage = () => {
         </div>
       </div>
 
-      {/* Fixed Place Order Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
         <div className="max-w-lg mx-auto">
-          <button
-            onClick={handlePlaceOrder}
-            disabled={!selectedTime}
-            className="btn-primary w-full text-lg"
-          >
-            {selectedTime ? `Place Order · Pickup at ${selectedTime}` : 'Select a pickup time'}
+          <button onClick={handlePlaceOrder} disabled={!selectedTime || placing} className="btn-primary w-full text-lg">
+            {placing ? 'Placing Order...' : selectedTime ? `Place Order · Pickup at ${selectedTime}` : 'Select a pickup time'}
           </button>
         </div>
       </div>

@@ -1,22 +1,63 @@
 import { useNavigate } from 'react-router-dom';
-import { User, Store, Zap } from 'lucide-react';
+import { User, Store, Zap, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const RoleSelectionPage = () => {
   const navigate = useNavigate();
+  const { user, userRole, signOut, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="page-container flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  // If logged in, redirect based on role
+  const handleCustomer = () => {
+    if (!user) { navigate('/auth'); return; }
+    navigate('/home');
+  };
+
+  const handleShopkeeper = () => {
+    if (!user) { navigate('/auth'); return; }
+    if (userRole === 'shopkeeper') {
+      navigate('/shopkeeper/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   return (
     <div className="page-container fade-in">
       <div className="content-container flex flex-col items-center justify-center min-h-screen text-center">
+        {user && (
+          <button
+            onClick={async () => { await signOut(); }}
+            className="absolute top-6 right-6 p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        )}
+
         <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
           <Zap className="w-8 h-8 text-primary" />
         </div>
 
         <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to Smartfetch</h1>
-        <p className="text-muted-foreground mb-10">Choose your role to continue</p>
+        <p className="text-muted-foreground mb-2">Choose your role to continue</p>
+        {user && (
+          <p className="text-sm text-primary mb-6">Signed in as {user.email}</p>
+        )}
+        {!user && (
+          <p className="text-sm text-muted-foreground mb-6">You'll need to sign in first</p>
+        )}
 
         <div className="w-full space-y-4 max-w-sm">
           <button
-            onClick={() => navigate('/home')}
+            onClick={handleCustomer}
             className="card-interactive w-full flex items-center gap-4 p-6"
           >
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -29,7 +70,7 @@ const RoleSelectionPage = () => {
           </button>
 
           <button
-            onClick={() => navigate('/shopkeeper/login')}
+            onClick={handleShopkeeper}
             className="card-interactive w-full flex items-center gap-4 p-6"
           >
             <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center shrink-0">

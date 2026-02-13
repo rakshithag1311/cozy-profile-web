@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, Package, ChefHat, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Package, ChefHat, XCircle, AlertTriangle } from 'lucide-react';
 import { useOrders } from '@/contexts/OrderContext';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -54,12 +54,6 @@ const OrderTrackingPage = () => {
           <span className={`ml-auto ${statusDisplay.className}`}>{statusDisplay.label}</span>
         </div>
 
-        {/* Simulation Note */}
-        <div className="flex items-start gap-3 p-3 rounded-xl bg-info/10 border border-info/20 mb-6">
-          <Info className="w-4 h-4 text-info mt-0.5 shrink-0" />
-          <p className="text-xs text-muted-foreground">Status updates are visual simulations in this prototype.</p>
-        </div>
-
         {/* QR Code */}
         <div className="card-base flex flex-col items-center p-6 mb-6">
           {isActive ? (
@@ -75,7 +69,6 @@ const OrderTrackingPage = () => {
           )}
         </div>
 
-        {/* Cancelled / Rejected message */}
         {order.status === 'cancelled' && (
           <div className="flex items-start gap-3 p-4 rounded-xl bg-muted border border-border mb-6">
             <XCircle className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
@@ -89,7 +82,6 @@ const OrderTrackingPage = () => {
           </div>
         )}
 
-        {/* Status Timeline */}
         {isActive && (
           <div className="card-base mb-6">
             <h2 className="section-title">Order Status</h2>
@@ -102,9 +94,7 @@ const OrderTrackingPage = () => {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step.done ? 'bg-success/20' : 'bg-secondary'}`}>
                         <Icon className={`w-5 h-5 ${step.done ? 'text-success' : 'text-muted-foreground'}`} />
                       </div>
-                      {i < steps.length - 1 && (
-                        <div className={`w-0.5 h-8 ${step.done ? 'bg-success/40' : 'bg-border'}`} />
-                      )}
+                      {i < steps.length - 1 && <div className={`w-0.5 h-8 ${step.done ? 'bg-success/40' : 'bg-border'}`} />}
                     </div>
                     <div className="pt-2">
                       <p className={`font-medium ${step.done ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
@@ -116,7 +106,6 @@ const OrderTrackingPage = () => {
           </div>
         )}
 
-        {/* Order Info */}
         <div className="card-base mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-primary" />
@@ -124,8 +113,8 @@ const OrderTrackingPage = () => {
           </div>
           <p className="text-sm text-muted-foreground mb-3">{order.shopName}</p>
           <div className="border-t border-border pt-3">
-            {order.items.map(item => (
-              <div key={item.id} className="flex justify-between text-sm mb-1">
+            {order.items.map((item: any, idx: number) => (
+              <div key={idx} className="flex justify-between text-sm mb-1">
                 <span className="text-foreground">{item.name} × {item.quantity}</span>
                 <span className="text-muted-foreground">₹{(item.price * item.quantity).toFixed(0)}</span>
               </div>
@@ -137,19 +126,14 @@ const OrderTrackingPage = () => {
           </div>
         </div>
 
-        {/* Cancel Button */}
         {canCancel && (
-          <button
-            onClick={() => cancelOrder(order.id)}
-            className="w-full py-3 rounded-xl border-2 border-destructive text-destructive font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors mb-3"
-          >
+          <button onClick={() => cancelOrder(order.id)}
+            className="w-full py-3 rounded-xl border-2 border-destructive text-destructive font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors mb-3">
             Cancel Order
           </button>
         )}
 
-        <button onClick={() => navigate('/')} className="btn-secondary w-full">
-          Back to Home
-        </button>
+        <button onClick={() => navigate('/')} className="btn-secondary w-full">Back to Home</button>
       </div>
     </div>
   );
