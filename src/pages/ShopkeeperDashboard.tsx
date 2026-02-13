@@ -1,38 +1,69 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Package, RefreshCw, Clock, QrCode } from 'lucide-react';
-import { useOrders, Order, OrderStatus } from '@/contexts/OrderContext';
+import { LogOut, Package, RefreshCw, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
 
-interface LoggedInShop {
+type OrderStatus = 'new' | 'preparing' | 'ready' | 'cancelled' | 'rejected';
+
+interface Order {
   id: string;
-  name: string;
+  items: any[];
+  status: OrderStatus;
+  shop_id: string;
+  shop_name: string;
+  total_price: number;
+  pickup_time: string;
+  created_at: string;
 }
 
 const ShopkeeperDashboard = () => {
   const navigate = useNavigate();
-  const { getOrdersByShop, updateOrderStatus } = useOrders();
-  const [shop, setShop] = useState<LoggedInShop | null>(null);
+  const { user, signOut, shopId, userRole, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const storedShop = localStorage.getItem('loggedInShop');
-    if (!storedShop) { navigate('/shopkeeper/login'); return; }
-    setShop(JSON.parse(storedShop));
-  }, [navigate]);
-
-  useEffect(() => {
-    if (shop) setOrders(getOrdersByShop(shop.id));
-  }, [shop, getOrdersByShop]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('loggedInShop');
-    navigate('/shopkeeper/login');
+  const fetchOrders = async () => {
+    if (!shopId) return;
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('shop_id', shopId)
+      .order('created_at', { ascending: false });
+    if (data) setOrders(data as Order[]);
+    setLoading(false);
   };
 
-  const handleStatusUpdate = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus);
-    if (shop) setOrders(getOrdersByShop(shop.id));
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || userRole !== 'shopkeeper') {
+      navigate('/auth');
+      return;
+    }
+    fetchOrders();
+  }, [user, userRole, shopId, authLoading, navigate]);
+
+  // Realtime
+  useEffect(() => {
+    if (!shopId) return;
+    const channel = supabase
+      .channel('shopkeeper-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `shop_id=eq.${shopId}` }, () => {
+        fetchOrders();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [shopId]);
+
+  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
+    await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    fetchOrders();
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
   };
 
   const getStatusDisplay = (status: OrderStatus) => {
@@ -46,9 +77,6 @@ const ShopkeeperDashboard = () => {
     }
   };
 
-  const refreshOrders = () => { if (shop) setOrders(getOrdersByShop(shop.id)); };
-
-  // Sort by pickup time
   const sortedOrders = [...orders].sort((a, b) => {
     const parseTime = (t: string) => {
       const [time, meridian] = t.split(' ');
@@ -57,10 +85,10 @@ const ShopkeeperDashboard = () => {
       if (meridian === 'AM' && h === 12) h = 0;
       return h * 60 + m;
     };
-    return parseTime(a.pickupTime) - parseTime(b.pickupTime);
+    return parseTime(a.pickup_time) - parseTime(b.pickup_time);
   });
 
-  if (!shop) return null;
+  if (authLoading || loading) return <div className="page-container flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Loading...</p></div>;
 
   return (
     <div className="page-container fade-in">
@@ -68,10 +96,10 @@ const ShopkeeperDashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Incoming Orders</h1>
-            <p className="text-sm text-muted-foreground">{shop.name}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={refreshOrders} className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
+            <button onClick={fetchOrders} className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
               <RefreshCw className="w-5 h-5 text-foreground" />
             </button>
             <button onClick={handleLogout} className="p-2 rounded-xl bg-destructive/10 hover:bg-destructive/20 transition-colors">
@@ -92,6 +120,7 @@ const ShopkeeperDashboard = () => {
           <div className="space-y-4">
             {sortedOrders.map((order) => {
               const statusDisplay = getStatusDisplay(order.status);
+              const items = order.items as any[];
               return (
                 <div key={order.id} className="card-base">
                   <div className="flex items-start justify-between mb-4">
@@ -99,58 +128,43 @@ const ShopkeeperDashboard = () => {
                       <p className="font-bold text-foreground">{order.id}</p>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                         <Clock className="w-3.5 h-3.5" />
-                        Pickup: {order.pickupTime}
+                        Pickup: {order.pickup_time}
                       </div>
                     </div>
                     <span className={statusDisplay.className}>{statusDisplay.label}</span>
                   </div>
 
-                  {/* QR preview */}
                   <div className="flex items-center gap-4 mb-4 p-3 bg-secondary/50 rounded-xl">
                     <QRCodeSVG value={order.id} size={56} />
-                    <div className="text-sm text-muted-foreground">
-                      Scan to verify order
-                    </div>
+                    <div className="text-sm text-muted-foreground">Scan to verify order</div>
                   </div>
 
                   <div className="border-t border-border pt-4 mb-4">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm mb-1">
+                    {items.map((item: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-sm mb-1">
                         <span className="text-foreground">{item.name} × {item.quantity}</span>
                         <span className="text-muted-foreground">₹{(item.price * item.quantity).toFixed(0)}</span>
                       </div>
                     ))}
                     <div className="flex justify-between font-semibold mt-2 pt-2 border-t border-border">
                       <span className="text-foreground">Total</span>
-                      <span className="text-primary">₹{order.totalPrice.toFixed(0)}</span>
+                      <span className="text-primary">₹{Number(order.total_price).toFixed(0)}</span>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
                     {order.status === 'new' && (
                       <>
-                        <button onClick={() => handleStatusUpdate(order.id, 'preparing')} className="btn-primary flex-1 py-2">
-                          Accept & Prepare
-                        </button>
-                        <button onClick={() => handleStatusUpdate(order.id, 'rejected')} className="flex-1 py-2 border-2 border-destructive text-destructive rounded-xl font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors">
-                          Reject
-                        </button>
+                        <button onClick={() => handleStatusUpdate(order.id, 'preparing')} className="btn-primary flex-1 py-2">Accept & Prepare</button>
+                        <button onClick={() => handleStatusUpdate(order.id, 'rejected')} className="flex-1 py-2 border-2 border-destructive text-destructive rounded-xl font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors">Reject</button>
                       </>
                     )}
                     {order.status === 'preparing' && (
-                      <button onClick={() => handleStatusUpdate(order.id, 'ready')} className="flex-1 py-2 bg-success text-success-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity">
-                        Mark as Ready
-                      </button>
+                      <button onClick={() => handleStatusUpdate(order.id, 'ready')} className="flex-1 py-2 bg-success text-success-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity">Mark as Ready</button>
                     )}
-                    {order.status === 'ready' && (
-                      <div className="flex-1 py-2 text-center text-success font-semibold">✓ Ready for Pickup</div>
-                    )}
-                    {order.status === 'cancelled' && (
-                      <div className="flex-1 py-2 text-center text-muted-foreground font-semibold">Cancelled by Customer</div>
-                    )}
-                    {order.status === 'rejected' && (
-                      <div className="flex-1 py-2 text-center text-destructive font-semibold">Order Rejected</div>
-                    )}
+                    {order.status === 'ready' && <div className="flex-1 py-2 text-center text-success font-semibold">✓ Ready for Pickup</div>}
+                    {order.status === 'cancelled' && <div className="flex-1 py-2 text-center text-muted-foreground font-semibold">Cancelled by Customer</div>}
+                    {order.status === 'rejected' && <div className="flex-1 py-2 text-center text-destructive font-semibold">Order Rejected</div>}
                   </div>
                 </div>
               );
