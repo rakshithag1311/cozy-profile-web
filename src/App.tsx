@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 import HomePage from "./pages/HomePage";
@@ -30,15 +31,15 @@ const App = () => (
               <Toaster />
               <Sonner />
               <Routes>
-                <Route path="/" element={<RoleSelectionPage />} />
+                <Route path="/" element={<ProtectedRoute><RoleSelectionPage /></ProtectedRoute>} />
                 <Route path="/auth" element={<AuthPage />} />
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/shops" element={<ShopListPage />} />
-                <Route path="/shop/:shopId" element={<ShopItemsPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
-                <Route path="/track/:orderId" element={<OrderTrackingPage />} />
-                <Route path="/shopkeeper/dashboard" element={<ShopkeeperDashboard />} />
+                <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+                <Route path="/shops" element={<ProtectedRoute><ShopListPage /></ProtectedRoute>} />
+                <Route path="/shop/:shopId" element={<ProtectedRoute><ShopItemsPage /></ProtectedRoute>} />
+                <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+                <Route path="/order-confirmation/:orderId" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
+                <Route path="/track/:orderId" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
+                <Route path="/shopkeeper/dashboard" element={<ProtectedRoute requiredRole="shopkeeper"><ShopkeeperDashboard /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </OrderProvider>

@@ -1,33 +1,42 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Zap, Clock, QrCode, ShoppingBag } from 'lucide-react';
+import { MapPin, Zap, Clock, QrCode, ShoppingBag, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
 
   return (
     <div className="page-container fade-in">
-      <div className="content-container flex flex-col items-center justify-center min-h-screen text-center">
+      <div className="content-container flex flex-col items-center justify-center min-h-screen text-center relative">
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="absolute top-6 right-6 p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+
+        {/* Welcome */}
+        <p className="text-sm text-primary font-semibold mb-4">Welcome, Customer</p>
+
         {/* Logo */}
         <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
           <Zap className="w-10 h-10 text-primary" />
         </div>
 
-        {/* Brand */}
-        <h1 className="text-4xl font-bold text-foreground mb-2">
-          Smartfetch
-        </h1>
-
-        {/* Tagline */}
-        <p className="text-lg font-medium text-primary mb-4">
-          Pick fast · Go smart
-        </p>
-
-        {/* Description */}
+        <h1 className="text-4xl font-bold text-foreground mb-2">Smartfetch</h1>
+        <p className="text-lg font-medium text-primary mb-4">Pick fast · Go smart</p>
         <p className="text-muted-foreground mb-10 max-w-xs leading-relaxed">
           Pre-order from nearby shops, choose a pickup time, and skip the waiting line.
         </p>
 
-        {/* Features */}
         <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-sm">
           <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border">
             <ShoppingBag className="w-5 h-5 text-primary" />
@@ -43,20 +52,12 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* CTA Button */}
-        <button
-          onClick={() => navigate('/shops')}
-          className="btn-primary flex items-center gap-2 text-lg"
-        >
+        <button onClick={() => navigate('/shops')} className="btn-primary flex items-center gap-2 text-lg">
           <MapPin className="w-5 h-5" />
           Find Shops
         </button>
 
-        {/* Shopkeeper Link */}
-        <button
-          onClick={() => navigate('/')}
-          className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors"
-        >
+        <button onClick={() => navigate('/')} className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors">
           ← Back to role selection
         </button>
       </div>
