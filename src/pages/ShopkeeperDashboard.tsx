@@ -37,8 +37,12 @@ const ShopkeeperDashboard = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || userRole !== 'shopkeeper') {
-      navigate('/auth');
+    if (!user) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+    if (userRole !== 'shopkeeper') {
+      navigate('/', { replace: true });
       return;
     }
     fetchOrders();
@@ -63,7 +67,7 @@ const ShopkeeperDashboard = () => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/');
+    navigate('/auth', { replace: true });
   };
 
   const getStatusDisplay = (status: OrderStatus) => {
@@ -95,6 +99,7 @@ const ShopkeeperDashboard = () => {
       <div className="content-container">
         <div className="flex items-center justify-between mb-6">
           <div>
+            <p className="text-sm text-primary font-semibold">Welcome, Shopkeeper</p>
             <h1 className="text-2xl font-bold text-foreground">Incoming Orders</h1>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>

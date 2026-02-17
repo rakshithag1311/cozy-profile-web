@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock, User, Store } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,7 @@ type RoleType = 'customer' | 'shopkeeper';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [role, setRole] = useState<RoleType>('customer');
   const [email, setEmail] = useState('');
@@ -20,6 +20,14 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [shops, setShops] = useState<{ id: string; name: string }[]>([]);
   const [shopsFetched, setShopsFetched] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  if (!authLoading && user) return null;
 
   const fetchShops = async () => {
     if (shopsFetched) return;
