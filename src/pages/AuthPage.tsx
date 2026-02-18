@@ -21,11 +21,17 @@ const AuthPage = () => {
   const [shops, setShops] = useState<{ id: string; name: string }[]>([]);
   const [shopsFetched, setShopsFetched] = useState(false);
 
+  const { userRole } = useAuth();
+
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/', { replace: true });
+      if (userRole === 'shopkeeper') {
+        navigate('/shopkeeper/dashboard', { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, user, userRole, navigate]);
 
   if (!authLoading && user) return null;
 
