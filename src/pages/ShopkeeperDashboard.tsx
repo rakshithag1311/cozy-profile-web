@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Package, RefreshCw, Clock } from 'lucide-react';
+import { LogOut, Package, RefreshCw, Clock, Plus, Store } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 type OrderStatus = 'new' | 'preparing' | 'ready' | 'cancelled' | 'rejected';
 
@@ -18,11 +19,31 @@ interface Order {
   created_at: string;
 }
 
+interface ShopInfo {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}
+
 const ShopkeeperDashboard = () => {
   const navigate = useNavigate();
   const { user, signOut, shopId, userRole, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null);
+
+  // Shop creation state
+  const [showCreateShop, setShowCreateShop] = useState(false);
+  const [newShopName, setNewShopName] = useState('');
+  const [newShopCategory, setNewShopCategory] = useState('');
+  const [newShopDescription, setNewShopDescription] = useState('');
+  const [creatingShop, setCreatingShop] = useState(false);
+
+  const fetchShopInfo = async (id: string) => {
+    const { data } = await supabase.from('shops').select('id, name, category, description').eq('id', id).single();
+    if (data) setShopInfo(data);
+  };
 
   const fetchOrders = async () => {
     if (!shopId) return;
@@ -37,15 +58,15 @@ const ShopkeeperDashboard = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      navigate('/auth', { replace: true });
-      return;
+    if (!user) { navigate('/auth', { replace: true }); return; }
+    if (userRole !== 'shopkeeper') { navigate('/', { replace: true }); return; }
+    if (shopId) {
+      fetchShopInfo(shopId);
+      fetchOrders();
+    } else {
+      setLoading(false);
+      setShowCreateShop(true);
     }
-    if (userRole !== 'shopkeeper') {
-      navigate('/', { replace: true });
-      return;
-    }
-    fetchOrders();
   }, [user, userRole, shopId, authLoading, navigate]);
 
   // Realtime
@@ -59,6 +80,42 @@ const ShopkeeperDashboard = () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [shopId]);
+
+  const handleCreateShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setCreatingShop(true);
+
+    const shopId = crypto.randomUUID();
+    const { error } = await supabase.from('shops').insert({
+      id: shopId,
+      name: newShopName,
+      category: newShopCategory,
+      description: newShopDescription,
+    });
+
+    if (error) {
+      toast.error('Failed to create shop: ' + error.message);
+      setCreatingShop(false);
+      return;
+    }
+
+    // Link shopkeeper to shop
+    const { error: staffError } = await supabase.from('shop_staff').insert({
+      user_id: user.id,
+      shop_id: shopId,
+    });
+
+    if (staffError) {
+      toast.error('Shop created but failed to link: ' + staffError.message);
+    } else {
+      toast.success('Shop created successfully!');
+    }
+
+    setCreatingShop(false);
+    // Reload to pick up new shopId from AuthContext
+    window.location.reload();
+  };
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
@@ -94,13 +151,51 @@ const ShopkeeperDashboard = () => {
 
   if (authLoading || loading) return <div className="page-container flex items-center justify-center min-h-screen"><p className="text-muted-foreground">Loading...</p></div>;
 
+  // No shop yet — show create shop form
+  if (!shopId || showCreateShop) {
+    return (
+      <div className="page-container fade-in">
+        <div className="content-container flex flex-col items-center justify-center min-h-screen">
+          <button onClick={handleLogout} className="absolute top-6 right-6 p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-2 text-sm text-muted-foreground">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+            <Store className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Welcome, Shopkeeper</h1>
+          <p className="text-muted-foreground mb-8">Create your shop to start receiving orders</p>
+
+          <form onSubmit={handleCreateShop} className="w-full max-w-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Shop Name</label>
+              <input type="text" value={newShopName} onChange={e => setNewShopName(e.target.value)} placeholder="e.g. Campus Café" className="input-field" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Category</label>
+              <input type="text" value={newShopCategory} onChange={e => setNewShopCategory(e.target.value)} placeholder="e.g. Food, Stationery, Xerox" className="input-field" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+              <textarea value={newShopDescription} onChange={e => setNewShopDescription(e.target.value)} placeholder="A short description of your shop" className="input-field min-h-[80px]" required />
+            </div>
+            <button type="submit" disabled={creatingShop} className="btn-primary w-full flex items-center justify-center gap-2">
+              <Plus className="w-5 h-5" />
+              {creatingShop ? 'Creating...' : 'Create Shop'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-container fade-in">
       <div className="content-container">
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-sm text-primary font-semibold">Welcome, Shopkeeper</p>
-            <h1 className="text-2xl font-bold text-foreground">Incoming Orders</h1>
+            <h1 className="text-2xl font-bold text-foreground">{shopInfo?.name || 'Incoming Orders'}</h1>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2">
