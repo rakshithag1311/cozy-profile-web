@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Lock, User, Store } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Store, Zap, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ const AuthPage = () => {
   const [role, setRole] = useState<RoleType>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedShop, setSelectedShop] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,8 +60,6 @@ const AuthPage = () => {
         return;
       }
 
-      // After signup, we need to wait for the user to be created, then assign role
-      // The profile is auto-created via trigger. We need to add the role.
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('user_roles').insert({ user_id: user.id, role });
@@ -69,7 +68,7 @@ const AuthPage = () => {
         }
       }
 
-      toast.success('Account created! Please check your email to verify your account.');
+      toast.success('Account created! Please check your email to verify.');
       setMode('login');
     } else {
       const { error } = await signIn(email, password);
@@ -78,8 +77,7 @@ const AuthPage = () => {
         setLoading(false);
         return;
       }
-      toast.success('Logged in successfully!');
-      // Navigation will be handled by role check in the app
+      toast.success('Welcome back!');
       navigate('/');
     }
 
@@ -88,92 +86,162 @@ const AuthPage = () => {
 
   return (
     <div className="page-container fade-in">
-      <div className="content-container flex flex-col justify-center min-h-screen">
-        <button onClick={() => navigate('/')} className="absolute top-6 left-6 p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+      <div className="content-container flex flex-col justify-center min-h-screen py-12">
+        {/* Back button */}
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-6 left-6 btn-ghost p-2.5"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            {role === 'customer' ? <User className="w-8 h-8 text-primary" /> : <Store className="w-8 h-8 text-primary" />}
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8 fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 shadow-primary">
+            <Zap className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            {mode === 'login' ? 'Welcome back' : 'Create account'}
           </h1>
-          <p className="text-muted-foreground mt-2">
-            {mode === 'login' ? 'Sign in to your account' : 'Join Smartfetch today'}
+          <p className="text-muted-foreground mt-1 text-sm">
+            {mode === 'login' ? 'Sign in to your Smartfetch account' : 'Join Smartfetch today'}
           </p>
         </div>
 
+        {/* Role toggle (signup only) */}
         {mode === 'signup' && (
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6 p-1.5 bg-secondary rounded-2xl fade-in">
             <button
+              type="button"
               onClick={() => handleRoleChange('customer')}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${role === 'customer' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}
+              className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                role === 'customer'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <User className="w-4 h-4 inline mr-2" />Customer
+              <User className="w-4 h-4" />
+              Customer
             </button>
             <button
+              type="button"
               onClick={() => handleRoleChange('shopkeeper')}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${role === 'shopkeeper' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}
+              className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                role === 'shopkeeper'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Store className="w-4 h-4 inline mr-2" />Shopkeeper
+              <Store className="w-4 h-4" />
+              Shopkeeper
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4 fade-in stagger-1">
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Display Name</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Display Name</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" className="input-field pl-12" required />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your full name"
+                  className="input-field pl-11"
+                  required
+                  autoComplete="name"
+                />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="input-field pl-12" required />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="input-field pl-11"
+                required
+                autoComplete="email"
+              />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="input-field pl-12" required minLength={6} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+                className="input-field pl-11 pr-12"
+                required
+                minLength={6}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
           {mode === 'signup' && role === 'shopkeeper' && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Select Your Shop</label>
-              <select
-                value={selectedShop}
-                onChange={(e) => setSelectedShop(e.target.value)}
-                className="input-field"
-                required
-              >
-                <option value="">Choose a shop...</option>
-                {shops.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-semibold text-foreground mb-2">Select Your Shop</label>
+              <div className="relative">
+                <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <select
+                  value={selectedShop}
+                  onChange={(e) => setSelectedShop(e.target.value)}
+                  className="input-field pl-11 appearance-none"
+                  required
+                >
+                  <option value="">Choose your shop...</option>
+                  {shops.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5 ml-1">Or create one after signing up</p>
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="btn-primary w-full mt-6">
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full mt-2 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+                Please wait...
+              </>
+            ) : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        {/* Toggle mode */}
+        <p className="text-center text-sm text-muted-foreground mt-6 fade-in stagger-2">
           {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
-          <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-semibold hover:underline">
+          <button
+            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            className="text-primary font-semibold hover:underline underline-offset-2 transition-colors"
+          >
             {mode === 'login' ? 'Sign Up' : 'Sign In'}
           </button>
         </p>
