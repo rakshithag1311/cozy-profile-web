@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Zap, Clock, QrCode, ShoppingBag, LogOut } from 'lucide-react';
+import { MapPin, Zap, Clock, QrCode, ShoppingBag, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -23,13 +24,15 @@ const HomePage = () => {
           Logout
         </button>
 
-        {/* Welcome */}
-        <p className="text-sm text-primary font-semibold mb-4">Welcome, Customer</p>
+        {/* Profile Avatar */}
+        <Avatar className="w-20 h-20 mb-4 border-2 border-primary/20">
+          <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+          <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+            {user?.user_metadata?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || <User className="w-8 h-8" />}
+          </AvatarFallback>
+        </Avatar>
 
-        {/* Logo */}
-        <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-          <Zap className="w-10 h-10 text-primary" />
-        </div>
+        <p className="text-sm text-primary font-semibold mb-2">Welcome, {user?.user_metadata?.display_name || 'Customer'}</p>
 
         <h1 className="text-4xl font-bold text-foreground mb-2">Smartfetch</h1>
         <p className="text-lg font-medium text-primary mb-4">Pick fast · Go smart</p>
