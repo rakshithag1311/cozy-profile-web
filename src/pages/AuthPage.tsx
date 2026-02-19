@@ -63,16 +63,22 @@ const AuthPage = () => {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('user_roles').insert({ user_id: user.id, role });
+      // Wait briefly for auto-confirm to complete, then get the authenticated user
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      const newUser = newSession?.user;
+      if (newUser) {
+        await supabase.from('user_roles').insert({ user_id: newUser.id, role });
         if (role === 'shopkeeper' && selectedShop) {
-          await supabase.from('shop_staff').insert({ user_id: user.id, shop_id: selectedShop });
+          await supabase.from('shop_staff').insert({ user_id: newUser.id, shop_id: selectedShop });
         }
+        toast.success('Account created! Redirecting...');
+        // The useEffect will handle redirect once role loads
+        // Force a role refetch by reloading
+        window.location.reload();
+      } else {
+        toast.success('Account created! Please check your email to verify.');
+        setMode('login');
       }
-
-      toast.success('Account created! Please check your email to verify.');
-      setMode('login');
     } else {
       const { error } = await signIn(email, password);
       if (error) {
