@@ -23,52 +23,78 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [shopId, setShopId] = useState<string | null>(null);
 
   const fetchUserRole = async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-    
-    if (data && data.length > 0) {
-      const role = data[0].role as 'customer' | 'shopkeeper';
-      setUserRole(role);
-      
-      if (role === 'shopkeeper') {
-        const { data: staffData } = await supabase
-          .from('shop_staff')
-          .select('shop_id')
-          .eq('user_id', userId);
-        if (staffData && staffData.length > 0) {
-          setShopId(staffData[0].shop_id);
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (data && data.length > 0) {
+        const role = data[0].role as 'customer' | 'shopkeeper';
+        setUserRole(role);
+
+        if (role === 'shopkeeper') {
+          const { data: staffData } = await supabase
+            .from('shop_staff')
+            .select('shop_id')
+            .eq('user_id', userId);
+          if (staffData && staffData.length > 0) {
+            setShopId(staffData[0].shop_id);
+          }
         }
+      } else {
+        setUserRole(null);
       }
-    } else {
+    } catch {
       setUserRole(null);
     }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setTimeout(() => fetchUserRole(session.user.id), 0);
-      } else {
-        setUserRole(null);
-        setShopId(null);
-      }
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      }
-      setLoading(false);
-    });
+    // Listener for ONGOING auth changes (does NOT control loading)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
 
-    return () => subscription.unsubscribe();
+        if (session?.user) {
+          // Use setTimeout to avoid Supabase deadlock
+          setTimeout(() => {
+            if (isMounted) fetchUserRole(session.user.id);
+          }, 0);
+        } else {
+          setUserRole(null);
+          setShopId(null);
+        }
+      }
+    );
+
+    // INITIAL load — fetch role BEFORE setting loading=false
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await fetchUserRole(session.user.id);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string) => {
@@ -90,6 +116,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
     setUserRole(null);
     setShopId(null);
   };

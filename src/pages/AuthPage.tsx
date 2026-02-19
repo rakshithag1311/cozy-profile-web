@@ -25,7 +25,7 @@ const AuthPage = () => {
   const { userRole } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && userRole) {
       if (userRole === 'shopkeeper') {
         navigate('/shopkeeper/dashboard', { replace: true });
       } else {
@@ -34,7 +34,8 @@ const AuthPage = () => {
     }
   }, [authLoading, user, userRole, navigate]);
 
-  if (!authLoading && user) return null;
+  // If already logged in with a role, don't show auth page
+  if (!authLoading && user && userRole) return null;
 
   const fetchShops = async () => {
     if (shopsFetched) return;
