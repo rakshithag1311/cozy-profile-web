@@ -25,12 +25,14 @@ const AuthPage = () => {
   const { userRole } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user && userRole) {
-      if (userRole === 'shopkeeper') {
-        navigate('/shopkeeper/dashboard', { replace: true });
-      } else {
-        navigate('/home', { replace: true });
-      }
+    if (authLoading || !user) return;
+    if (userRole === 'shopkeeper') {
+      navigate('/shopkeeper/dashboard', { replace: true });
+    } else if (userRole === 'customer') {
+      navigate('/home', { replace: true });
+    } else {
+      // User is logged in but has no role yet — go to role selection
+      navigate('/', { replace: true });
     }
   }, [authLoading, user, userRole, navigate]);
 
@@ -79,7 +81,7 @@ const AuthPage = () => {
         return;
       }
       toast.success('Welcome back!');
-      navigate('/');
+      // Don't navigate here — the useEffect watching userRole will redirect once the role loads
     }
 
     setLoading(false);
